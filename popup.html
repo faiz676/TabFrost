@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TabFrost</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+<div class="header">
+  <div class="logo">❄️ TabFrost</div>
+  <div class="stats">
+    <div class="ram-badge">
+      <span id="ramSaved">0 MB</span> saved
+    </div>
+    <div class="frozen-badge">
+      <span id="suspendedCount">0</span> frozen
+    </div>
+  </div>
+</div>
+
+  <!-- TABS SECTION -->
+  <div class="section">
+    <div class="section-header">
+      <span>Open Tabs</span>
+      <button class="suspend-all-btn" id="suspendAllBtn">
+        Freeze All
+      </button>
+    </div>
+    <div class="tab-list" id="tabList">
+      <!-- Tabs injected by popup.js -->
+    </div>
+  </div>
+
+  <!-- SESSIONS SECTION -->
+  <div class="section">
+    <div class="section-header">
+      <span>Saved Sessions</span>
+      <button class="save-session-btn" title="Click to save tabs" id="saveSessionBtn">
+        + Save Current
+      </button>
+    </div>
+    <div class="session-list" id="sessionList">
+      <!-- Sessions injected by popup.js -->
+    </div>
+  </div>
+    <!-- SESSION NAME MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Save Session</div>
+    <div class="modal-subtitle" id="modalSubtitle">
+      0 tabs will be saved
+    </div>
+    <input
+      type="text"
+      class="modal-input"
+      id="sessionNameInput"
+      placeholder="e.g. Research, Work, Shopping..."
+      maxlength="40"
+    />
+    <div class="modal-actions">
+      <button class="modal-cancel" id="modalCancel">Cancel</button>
+      <button class="modal-save" id="modalSave">Save Session</button>
+    </div>
+  </div>
+</div>
+<!-- SETTINGS SECTION -->
+<div class="section">
+  <div class="section-header">
+    <span>Settings</span>
+  </div>
+  <div class="setting-item">
+    <div class="setting-info">
+      <div class="setting-title">Auto-Suspend</div>
+      <div class="setting-desc">
+        Freeze tabs inactive for 30 minutes
+      </div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="autoSuspendToggle" checked>
+      <span class="toggle-slider"></span>
+    </label>
+  </div>
+</div>
+  <script src="popup.js"></script>
+</body>
+</html> 
