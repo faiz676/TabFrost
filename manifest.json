@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TabFrost: Tab Suspend & Session Manager",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Freeze background tabs to save RAM, and save tab sessions to safely close Chrome and restore everything later.",
   "permissions": [
     "tabs",

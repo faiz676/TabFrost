@@ -7,7 +7,26 @@ if (originalUrl) {
   document.getElementById('originalUrl').textContent = originalUrl;
   document.title = `💤 ${originalTitle || originalUrl}`;
 }
+function applyFavicon() {
+  if (!originalUrl) return;
 
+  let src = params.get('favicon');
+
+  if (!src) {
+    try {
+      const hostname = new URL(originalUrl).hostname;
+      src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`;
+    } catch {
+      return;
+    }
+  }
+
+  const link = document.querySelector("link[rel='icon']");
+  if (!link) return;
+  link.href = src;
+}
+
+applyFavicon();
 function restoreTab() {
   if (!originalUrl) return;
 

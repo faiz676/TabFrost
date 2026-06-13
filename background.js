@@ -137,9 +137,16 @@ async function shouldSkipTab(tab) {
 
 async function suspendTab(tab) {
   try {
-    const suspendUrl = chrome.runtime.getURL('suspend.html') +
-      `?url=${encodeURIComponent(tab.url)}` +
-      `&title=${encodeURIComponent(tab.title)}`;
+    const faviconParam =
+  tab.favIconUrl && !tab.favIconUrl.startsWith('data:')
+    ? `&favicon=${encodeURIComponent(tab.favIconUrl)}`
+    : '';
+
+const suspendUrl =
+  chrome.runtime.getURL('suspend.html') +
+  `?url=${encodeURIComponent(tab.url)}` +
+  `&title=${encodeURIComponent(tab.title)}` +
+  faviconParam;
 
     await chrome.tabs.update(tab.id, { url: suspendUrl });
 

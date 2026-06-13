@@ -399,24 +399,28 @@ async function restoreSession(session) {
 // ============================================
 function setupButtons() {
     // Freeze all tabs
-    document.getElementById('suspendAllBtn')
-        .addEventListener('click', async () => {
-            const tabs = await chrome.tabs.query({ currentWindow: true });
-            const whitelist = await getWhitelist();
-            for (const tab of tabs) {
-                if (!tab.active &&
-                    !tab.pinned &&
-                    !tab.url.startsWith(suspendUrl) &&
-                    !tab.url.startsWith('chrome://') &&
-                    !whitelist.includes(tab.url)) {
-                    await chrome.runtime.sendMessage({
-                        action: 'suspendTab',
-                        tab: tab
-                    });
-                }
+    // REPLACE WITH:
+document.getElementById('suspendAllBtn')
+    .addEventListener('click', async () => {
+        const tabs = await chrome.tabs.query({ currentWindow: true });
+        const whitelist = await getWhitelist();
+        for (const tab of tabs) {
+            if (!tab.active &&
+                !tab.pinned &&
+                !tab.url.startsWith(suspendUrl) &&
+                !tab.url.startsWith('chrome://') &&
+                !whitelist.includes(tab.url)) {
+                await chrome.runtime.sendMessage({
+                    action: 'suspendTab',
+                    tab: tab
+                });
             }
-            await renderTabs();
-        });
+        }
+        // Wait for all tabs to finish navigating to suspend.html
+        // before re-rendering, otherwise some still show as active
+        await new Promise(resolve => setTimeout(resolve, 600));
+        await renderTabs();
+    });
 
     // Save session — open modal instead of prompt
     document.getElementById('saveSessionBtn')
