@@ -32,72 +32,12 @@ async function renderTabs() {
     // First time user — show welcome if no frozen tabs yet
     const result = await chrome.storage.local.get('hasUsedBefore');
 
-
     if (!result.hasUsedBefore && frozenTabs.length === 0) {
-  await chrome.storage.local.set({ hasUsedBefore: true });
-  showWelcomeScreen(tabList, activeTabs, frozenTabs);
-  return;
-}
-// ============================================
-// WELCOME SCREEN — shows once, auto dismisses
-// ============================================
-function showWelcomeScreen(tabList, activeTabs, frozenTabs) {
-  // Show welcome content
-  tabList.innerHTML = `
-    <div class="welcome-state" id="welcomeState">
-      <div class="welcome-icon">❄️</div>
-      <div class="welcome-title">Welcome to TabFrost</div>
-      <div class="welcome-text">
-        Click <strong>Freeze</strong> on any tab to suspend 
-        it and save RAM instantly. TabFrost will also 
-        auto-freeze tabs inactive for 30 minutes.
-      </div>
-      <div class="welcome-timer" id="welcomeTimer">
-        Taking you in 10 seconds...
-      </div>
-    </div>
-  `;
-
-  // Countdown timer
-  let seconds = 10;
-  const timerEl = document.getElementById('welcomeTimer');
-
-  const countdown = setInterval(() => {
-    seconds--;
-    if (timerEl) {
-      timerEl.textContent = seconds > 0
-        ? `Taking you in ${seconds} second${seconds !== 1 ? 's' : ''}...`
-        : 'Loading your tabs...';
+        await chrome.storage.local.set({ hasUsedBefore: true });
+        showWelcomeScreen(tabList, activeTabs, frozenTabs);
+        return;
     }
 
-    if (seconds <= 0) {
-      clearInterval(countdown);
-      // Fade out welcome
-      const welcomeState = document.getElementById('welcomeState');
-      if (welcomeState) {
-        welcomeState.style.transition = 'opacity 0.4s ease';
-        welcomeState.style.opacity = '0';
-      }
-      // Load real tabs after fade
-      setTimeout(async () => {
-        tabList.innerHTML = '';
-        for (const tab of activeTabs) {
-          const item = await createTabItem(tab, false);
-          tabList.appendChild(item);
-        }
-        for (const tab of frozenTabs) {
-          const item = await createTabItem(tab, true);
-          tabList.appendChild(item);
-        }
-        if (activeTabs.length === 0 && frozenTabs.length === 0) {
-          tabList.innerHTML =
-            '<div class="empty-state">No tabs open</div>';
-        }
-      }, 400);
-    }
-  }, 1000);
-}
-    // Show active tabs first
     // Show active tabs first
     for (const tab of activeTabs) {
         const item = await createTabItem(tab, false);
@@ -116,13 +56,67 @@ function showWelcomeScreen(tabList, activeTabs, frozenTabs) {
 }
 
 // ============================================
+// WELCOME SCREEN — shows once, auto dismisses
+// ============================================
+function showWelcomeScreen(tabList, activeTabs, frozenTabs) {
+  tabList.innerHTML = `
+    <div class="welcome-state" id="welcomeState">
+      <div class="welcome-icon">❄️</div>
+      <div class="welcome-title">Welcome to TabFrost</div>
+      <div class="welcome-text">
+        Click <strong>Freeze</strong> on any tab to suspend 
+        it and save RAM instantly. TabFrost will also 
+        auto-freeze tabs inactive for 30 minutes.
+      </div>
+      <div class="welcome-timer" id="welcomeTimer">
+        Taking you in 10 seconds...
+      </div>
+    </div>
+  `;
+
+  let seconds = 10;
+  const timerEl = document.getElementById('welcomeTimer');
+
+  const countdown = setInterval(() => {
+    seconds--;
+    if (timerEl) {
+      timerEl.textContent = seconds > 0
+        ? `Taking you in ${seconds} second${seconds !== 1 ? 's' : ''}...`
+        : 'Loading your tabs...';
+    }
+
+    if (seconds <= 0) {
+      clearInterval(countdown);
+      const welcomeState = document.getElementById('welcomeState');
+      if (welcomeState) {
+        welcomeState.style.transition = 'opacity 0.4s ease';
+        welcomeState.style.opacity = '0';
+      }
+      setTimeout(async () => {
+        tabList.innerHTML = '';
+        for (const tab of activeTabs) {
+          const item = await createTabItem(tab, false);
+          tabList.appendChild(item);
+        }
+        for (const tab of frozenTabs) {
+          const item = await createTabItem(tab, true);
+          tabList.appendChild(item);
+        }
+        if (activeTabs.length === 0 && frozenTabs.length === 0) {
+          tabList.innerHTML = '<div class="empty-state">No tabs open</div>';
+        }
+      }, 400);
+    }
+  }, 1000);
+}
+
+// ============================================
 // AUTO SUSPEND TOGGLE
 // ============================================
 async function setupAutoSuspendToggle() {
   const toggle = document.getElementById('autoSuspendToggle');
   const result = await chrome.storage.local.get('autoSuspendEnabled');
 
-  // Default is ON if never set before
   const isEnabled = result.autoSuspendEnabled !== false;
   toggle.checked = isEnabled;
 
@@ -130,7 +124,6 @@ async function setupAutoSuspendToggle() {
     await chrome.storage.local.set({
       autoSuspendEnabled: toggle.checked
     });
-    // Notify background
     chrome.runtime.sendMessage({
       action: 'updateAutoSuspend',
       enabled: toggle.checked
@@ -165,12 +158,12 @@ async function showAutoSuspendNotice() {
     await chrome.storage.local.set({ noticeDismissed: true });
   });
 
-  notice.appendChild(text)
+  notice.appendChild(text);
   notice.appendChild(closeBtn);
 
-  // Insert before session list
   sessionList.parentNode.insertBefore(notice, sessionList);
 }
+
 // ============================================
 // WHITELIST HELPERS
 // ============================================
@@ -192,7 +185,8 @@ async function toggleWhitelist(url) {
 }
 
 // ============================================
-// CREATE TAB ITEM — no inline handlers
+// CREATE TAB ITEM
+// FEATURE 1: clicking tab info navigates to that tab
 // ============================================
 async function createTabItem(tab, isSuspended) {
     const item = document.createElement('div');
@@ -217,9 +211,18 @@ async function createTabItem(tab, isSuspended) {
         faviconEl.textContent = '❄️';
     }
 
-    // Build tab info
+    // Build tab info — clickable to switch to that tab
     const tabInfo = document.createElement('div');
-    tabInfo.className = 'tab-info';
+    tabInfo.className = 'tab-info tab-info-clickable';
+    tabInfo.title = `Go to: ${title}`;
+
+    // FEATURE 1: click to navigate to the tab
+    tabInfo.addEventListener('click', async () => {
+        await chrome.tabs.update(tab.id, { active: true });
+        // Also focus the window that contains the tab
+        await chrome.windows.update(tab.windowId, { focused: true });
+        window.close(); // close popup after switching
+    });
 
     const tabTitle = document.createElement('span');
     tabTitle.className = `tab-title ${isSuspended ? 'suspended' : ''}`;
@@ -289,7 +292,8 @@ async function createTabItem(tab, isSuspended) {
         actionEl.className = 'freeze-btn';
         actionEl.dataset.tabId = tab.id;
         actionEl.textContent = 'Freeze';
-        actionEl.addEventListener('click', async () => {
+        actionEl.addEventListener('click', async (e) => {
+            e.stopPropagation();
             await chrome.runtime.sendMessage({
                 action: 'suspendTab',
                 tab: tab
@@ -331,7 +335,6 @@ async function renderSessions() {
         return;
     }
 
-    // Show newest first
     const sorted = [...sessions].reverse();
 
     for (const session of sorted) {
@@ -339,13 +342,21 @@ async function renderSessions() {
     }
 }
 
+// ============================================
+// CREATE SESSION ITEM
+// FEATURE 2: Preview button to expand/collapse session tabs
+// FEATURE 3: Restore individual tab from preview
+// ============================================
 function createSessionItem(session, allSessions) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'session-wrapper';
+
+    // --- Main session row ---
     const item = document.createElement('div');
     item.className = 'session-item';
 
     const date = new Date(session.savedAt).toLocaleDateString();
 
-    // Build session info
     const sessionInfo = document.createElement('div');
     sessionInfo.className = 'session-info';
 
@@ -361,9 +372,14 @@ function createSessionItem(session, allSessions) {
     sessionInfo.appendChild(sessionName);
     sessionInfo.appendChild(sessionMeta);
 
-    // Build session actions
     const sessionActions = document.createElement('div');
     sessionActions.className = 'session-actions';
+
+    // FEATURE 2: Preview button — toggles the tab list below
+    const previewBtn = document.createElement('button');
+    previewBtn.className = 'preview-btn';
+    previewBtn.title = 'Preview tabs in this session';
+    previewBtn.textContent = '👁';
 
     const restoreBtn = document.createElement('button');
     restoreBtn.className = 'restore-btn';
@@ -379,13 +395,74 @@ function createSessionItem(session, allSessions) {
         await renderSessions();
     });
 
+    sessionActions.appendChild(previewBtn);
     sessionActions.appendChild(restoreBtn);
     sessionActions.appendChild(deleteBtn);
 
     item.appendChild(sessionInfo);
     item.appendChild(sessionActions);
 
-    return item;
+    // --- Tab preview panel (hidden by default) ---
+    const previewPanel = document.createElement('div');
+    previewPanel.className = 'session-preview';
+    previewPanel.style.display = 'none';
+
+    // Build the list of tabs inside this session
+    for (const savedTab of session.tabs) {
+        const tabRow = document.createElement('div');
+        tabRow.className = 'preview-tab-row';
+
+        // Favicon
+        const favicon = document.createElement('img');
+        favicon.className = 'preview-favicon';
+        if (savedTab.favIconUrl && !savedTab.favIconUrl.startsWith('data:')) {
+            favicon.src = savedTab.favIconUrl;
+        } else {
+            try {
+                const hostname = new URL(savedTab.url).hostname;
+                favicon.src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`;
+            } catch {
+                favicon.style.display = 'none';
+            }
+        }
+        favicon.addEventListener('error', () => {
+            favicon.style.display = 'none';
+        });
+
+        // Tab title
+        const tabTitle = document.createElement('span');
+        tabTitle.className = 'preview-tab-title';
+        tabTitle.textContent = savedTab.title || savedTab.url;
+        tabTitle.title = savedTab.url;
+
+        // FEATURE 3: Restore individual tab
+        const restoreTabBtn = document.createElement('button');
+        restoreTabBtn.className = 'restore-tab-btn';
+        restoreTabBtn.textContent = 'Open';
+        restoreTabBtn.title = `Open: ${savedTab.url}`;
+        restoreTabBtn.addEventListener('click', () => {
+            chrome.tabs.create({ url: savedTab.url, active: true });
+        });
+
+        tabRow.appendChild(favicon);
+        tabRow.appendChild(tabTitle);
+        tabRow.appendChild(restoreTabBtn);
+        previewPanel.appendChild(tabRow);
+    }
+
+    // Toggle preview on preview button click
+    let isExpanded = false;
+    previewBtn.addEventListener('click', () => {
+        isExpanded = !isExpanded;
+        previewPanel.style.display = isExpanded ? 'block' : 'none';
+        previewBtn.classList.toggle('active', isExpanded);
+        previewBtn.title = isExpanded ? 'Hide tabs' : 'Preview tabs in this session';
+    });
+
+    wrapper.appendChild(item);
+    wrapper.appendChild(previewPanel);
+
+    return wrapper;
 }
 
 async function restoreSession(session) {
@@ -398,31 +475,26 @@ async function restoreSession(session) {
 // BUTTONS
 // ============================================
 function setupButtons() {
-    // Freeze all tabs
-    // REPLACE WITH:
-document.getElementById('suspendAllBtn')
-    .addEventListener('click', async () => {
-        const tabs = await chrome.tabs.query({ currentWindow: true });
-        const whitelist = await getWhitelist();
-        for (const tab of tabs) {
-            if (!tab.active &&
-                !tab.pinned &&
-                !tab.url.startsWith(suspendUrl) &&
-                !tab.url.startsWith('chrome://') &&
-                !whitelist.includes(tab.url)) {
-                await chrome.runtime.sendMessage({
-                    action: 'suspendTab',
-                    tab: tab
-                });
+    document.getElementById('suspendAllBtn')
+        .addEventListener('click', async () => {
+            const tabs = await chrome.tabs.query({ currentWindow: true });
+            const whitelist = await getWhitelist();
+            for (const tab of tabs) {
+                if (!tab.active &&
+                    !tab.pinned &&
+                    !tab.url.startsWith(suspendUrl) &&
+                    !tab.url.startsWith('chrome://') &&
+                    !whitelist.includes(tab.url)) {
+                    await chrome.runtime.sendMessage({
+                        action: 'suspendTab',
+                        tab: tab
+                    });
+                }
             }
-        }
-        // Wait for all tabs to finish navigating to suspend.html
-        // before re-rendering, otherwise some still show as active
-        await new Promise(resolve => setTimeout(resolve, 600));
-        await renderTabs();
-    });
+            await new Promise(resolve => setTimeout(resolve, 600));
+            await renderTabs();
+        });
 
-    // Save session — open modal instead of prompt
     document.getElementById('saveSessionBtn')
         .addEventListener('click', async () => {
             const tabs = await chrome.tabs.query({ currentWindow: true });
@@ -433,7 +505,6 @@ document.getElementById('suspendAllBtn')
 
             if (realTabs.length === 0) return;
 
-            // Show modal
             openSessionModal(realTabs);
         });
 }
@@ -448,20 +519,16 @@ function openSessionModal(tabs) {
     const saveBtn = document.getElementById('modalSave');
     const cancelBtn = document.getElementById('modalCancel');
 
-    // Set default name and tab count
     subtitle.textContent = `${tabs.length} tabs will be saved`;
     input.value = `Session ${new Date().toLocaleDateString()}`;
 
-    // Show modal
     overlay.classList.add('active');
 
-    // Focus and select input text
     setTimeout(() => {
         input.focus();
         input.select();
     }, 50);
 
-    // Save button
     saveBtn.onclick = async () => {
         const name = input.value.trim();
         if (!name) return;
@@ -469,19 +536,16 @@ function openSessionModal(tabs) {
         overlay.classList.remove('active');
     };
 
-    // Cancel button
     cancelBtn.onclick = () => {
         overlay.classList.remove('active');
     };
 
-    // Close on overlay click
     overlay.onclick = (e) => {
         if (e.target === overlay) {
             overlay.classList.remove('active');
         }
     };
 
-    // Save on Enter key
     input.onkeydown = async (e) => {
         if (e.key === 'Enter') {
             const name = input.value.trim();

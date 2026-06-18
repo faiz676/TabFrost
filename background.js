@@ -1,4 +1,6 @@
-// ============================================
+chrome.runtime.setUninstallURL(
+  'https://faiz676.github.io/tabfrost-feedback/'
+);// ============================================
 // CONFIGURATION
 // ============================================
 const AUTO_SUSPEND_MINUTES = 30;
